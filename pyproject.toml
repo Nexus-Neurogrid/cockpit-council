@@ -27,18 +27,20 @@ dependencies = [
     "pydantic>=2.0",
     "langgraph>=0.2.50",
     "langchain-core>=0.3.0",
+]
+
+[project.optional-dependencies]
+db = [
     "asyncpg>=0.29",
     "pgvector>=0.3",
     "psycopg[binary]>=3.1",
     "pgserver>=0.1.0",
 ]
-
-[project.optional-dependencies]
 anthropic = ["langchain-anthropic>=0.3.0"]
 openai = ["langchain-openai>=0.3.0"]
 ollama = ["langchain-ollama>=0.1.0"]
 all = [
-    "cockpit-council[anthropic,openai,ollama]",
+    "cockpit-council[anthropic,openai,ollama,db]",
 ]
 dev = [
     "pytest>=8.0",
@@ -51,9 +53,9 @@ dev = [
 cockpit = "cockpit.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/neurogrid-dev/cockpit-council"
-Repository = "https://github.com/neurogrid-dev/cockpit-council"
-Documentation = "https://github.com/neurogrid-dev/cockpit-council#readme"
+Homepage = "https://github.com/Nexus-Neurogrid/cockpit-council"
+Repository = "https://github.com/Nexus-Neurogrid/cockpit-council"
+Documentation = "https://github.com/Nexus-Neurogrid/cockpit-council#readme"
 
 [tool.hatch.build.targets.wheel]
 packages = ["cockpit"]

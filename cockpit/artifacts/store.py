@@ -5,7 +5,10 @@ from __future__ import annotations
 import json
 import uuid
 
-import psycopg
+try:
+    import psycopg
+except ImportError:
+    psycopg = None  # type: ignore[assignment]
 
 from cockpit.artifacts.types import ParsedArtifact
 

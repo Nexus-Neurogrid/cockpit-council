@@ -5,7 +5,10 @@ from __future__ import annotations
 import logging
 import uuid
 
-import psycopg
+try:
+    import psycopg
+except ImportError:
+    psycopg = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 

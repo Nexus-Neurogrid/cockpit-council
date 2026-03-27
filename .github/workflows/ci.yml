@@ -23,7 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e ".[dev,all]"
+          pip install -e ".[dev,anthropic,openai,ollama]"
 
       - name: Lint
         run: ruff check cockpit/

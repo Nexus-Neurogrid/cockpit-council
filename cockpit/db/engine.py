@@ -11,7 +11,10 @@ import logging
 import os
 from pathlib import Path
 
-import psycopg
+try:
+    import psycopg
+except ImportError:
+    psycopg = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +33,21 @@ def _get_database_url() -> str:
     return f"postgresql://localhost:{_DEFAULT_PORT}/cockpit"
 
 
+def _check_db_deps() -> None:
+    if psycopg is None:
+        raise ImportError(
+            "Database features require the 'db' extra: "
+            "pip install cockpit-council[db]"
+        )
+
+
 async def ensure_running() -> str:
     """Start the embedded PG if needed and return the connection URL.
 
     If ``COCKPIT_DATABASE_URL`` is set, returns that URL directly and
     does not start an embedded instance.
     """
+    _check_db_deps()
     global _pg_server
 
     external = os.environ.get("COCKPIT_DATABASE_URL")
