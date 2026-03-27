@@ -20,17 +20,19 @@ logger = logging.getLogger(__name__)
 
 _COCKPIT_HOME = Path.home() / ".cockpit"
 _DATA_DIR = _COCKPIT_HOME / "data"
-_DEFAULT_PORT = 5413  # Avoid conflicts with user's Postgres
 
 _pg_server = None  # Module-level singleton
+_cockpit_url: str | None = None  # Cached URL after first start
 
 
-def _get_database_url() -> str:
-    """Return the external URL if set, otherwise embedded PG URL."""
+def get_connection_url() -> str:
+    """Return the current database URL (does not start PG)."""
     external = os.environ.get("COCKPIT_DATABASE_URL")
     if external:
         return external
-    return f"postgresql://localhost:{_DEFAULT_PORT}/cockpit"
+    if _cockpit_url:
+        return _cockpit_url
+    raise RuntimeError("Database not started. Run 'cockpit init' first.")
 
 
 def _check_db_deps() -> None:
@@ -48,15 +50,15 @@ async def ensure_running() -> str:
     does not start an embedded instance.
     """
     _check_db_deps()
-    global _pg_server
+    global _pg_server, _cockpit_url
 
     external = os.environ.get("COCKPIT_DATABASE_URL")
     if external:
         logger.info("Using external database: %s", external.split("@")[-1])
         return external
 
-    if _pg_server is not None:
-        return _get_database_url()
+    if _pg_server is not None and _cockpit_url:
+        return _cockpit_url
 
     _DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -66,10 +68,9 @@ async def ensure_running() -> str:
         _pg_server = pgserver.get_server(
             _DATA_DIR,
             cleanup_mode="stop",
-            port=_DEFAULT_PORT,
         )
         url = _pg_server.psycopg2_connection_url()
-        logger.info("Embedded PostgreSQL started on port %d", _DEFAULT_PORT)
+        logger.info("Embedded PostgreSQL started: %s", url)
 
         # Create the cockpit database if it doesn't exist
         with psycopg.connect(url, autocommit=True) as conn:
@@ -80,7 +81,10 @@ async def ensure_running() -> str:
                 conn.execute("CREATE DATABASE cockpit")
                 logger.info("Created 'cockpit' database")
 
-        return _get_database_url()
+        # Build URL pointing at the cockpit database
+        # pgserver URL targets default db; swap to cockpit
+        _cockpit_url = url.rsplit("/", 1)[0] + "/cockpit"
+        return _cockpit_url
 
     except ImportError:
         raise RuntimeError(
@@ -90,13 +94,9 @@ async def ensure_running() -> str:
         )
 
 
-def get_connection_url() -> str:
-    """Return the current database URL (does not start PG)."""
-    return _get_database_url()
-
-
 async def get_connection():
     """Get an async psycopg connection to the cockpit database."""
+    _check_db_deps()
     url = await ensure_running()
     conn = await psycopg.AsyncConnection.connect(url)
     return conn
@@ -104,8 +104,9 @@ async def get_connection():
 
 async def stop():
     """Stop the embedded PostgreSQL if running."""
-    global _pg_server
+    global _pg_server, _cockpit_url
     if _pg_server is not None:
         _pg_server.cleanup()
         _pg_server = None
+        _cockpit_url = None
         logger.info("Embedded PostgreSQL stopped")
