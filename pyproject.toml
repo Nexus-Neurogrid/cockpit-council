@@ -1,0 +1,71 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cockpit-council"
+version = "0.1.0"
+description = "Multi-agent deliberation library — get structured advice from a council of AI specialists"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "Neurogrid", email = "hello@neurogrid.io" },
+]
+keywords = ["ai", "agents", "multi-agent", "deliberation", "council", "langgraph"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "pydantic>=2.0",
+    "langgraph>=0.2.50",
+    "langchain-core>=0.3.0",
+    "asyncpg>=0.29",
+    "pgvector>=0.3",
+    "psycopg[binary]>=3.1",
+    "pgserver>=0.1.0",
+]
+
+[project.optional-dependencies]
+anthropic = ["langchain-anthropic>=0.3.0"]
+openai = ["langchain-openai>=0.3.0"]
+ollama = ["langchain-ollama>=0.1.0"]
+all = [
+    "cockpit-council[anthropic,openai,ollama]",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-timeout>=2.2",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+cockpit = "cockpit.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/neurogrid-dev/cockpit-council"
+Repository = "https://github.com/neurogrid-dev/cockpit-council"
+Documentation = "https://github.com/neurogrid-dev/cockpit-council#readme"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cockpit"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+timeout = 30
