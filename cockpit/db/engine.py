@@ -69,11 +69,11 @@ async def ensure_running() -> str:
             _DATA_DIR,
             cleanup_mode="stop",
         )
-        url = _pg_server.psycopg2_connection_url()
-        logger.info("Embedded PostgreSQL started: %s", url)
+        base_url = _pg_server.get_uri()
+        logger.info("Embedded PostgreSQL started: %s", base_url)
 
         # Create the cockpit database if it doesn't exist
-        with psycopg.connect(url, autocommit=True) as conn:
+        with psycopg.connect(base_url, autocommit=True) as conn:
             cur = conn.execute(
                 "SELECT 1 FROM pg_database WHERE datname = 'cockpit'"
             )
@@ -81,9 +81,8 @@ async def ensure_running() -> str:
                 conn.execute("CREATE DATABASE cockpit")
                 logger.info("Created 'cockpit' database")
 
-        # Build URL pointing at the cockpit database
-        # pgserver URL targets default db; swap to cockpit
-        _cockpit_url = url.rsplit("/", 1)[0] + "/cockpit"
+        # Swap the default db name to 'cockpit' in the URI
+        _cockpit_url = base_url.replace("/postgres?", "/cockpit?")
         return _cockpit_url
 
     except ImportError:
