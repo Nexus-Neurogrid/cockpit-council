@@ -115,11 +115,16 @@ class ClaudeCodeProvider:
         return AIMessage(content=stdout.decode().strip())
 
     async def astream(self, messages: list[BaseMessage], **kwargs) -> AsyncIterator[BaseMessage]:
-        """Stream output from claude CLI using --output-format stream-json."""
+        """Stream output from claude CLI using --output-format stream-json.
+
+        Falls back to non-streaming (ainvoke) and yields the full result
+        as a single chunk if stream-json is unavailable.
+        """
         system, user = _messages_to_prompt(messages)
         cmd = self._build_command(system, user)
 
-        # Insert stream flag before the user prompt (last element)
+        # Add verbose + stream-json flags before the user prompt (last arg)
+        cmd.insert(-1, "--verbose")
         cmd.insert(-1, "--output-format")
         cmd.insert(-1, "stream-json")
 
@@ -136,18 +141,16 @@ class ClaudeCodeProvider:
                 continue
             try:
                 event = json.loads(text)
-                if event.get("type") == "assistant" and event.get("message"):
+                # Final result contains the full text
+                if event.get("type") == "result" and event.get("result"):
+                    yield AIMessage(content=event["result"])
+                # Assistant message contains text blocks
+                elif event.get("type") == "assistant" and event.get("message"):
                     for block in event["message"].get("content", []):
                         if block.get("type") == "text" and block.get("text"):
                             yield AIMessage(content=block["text"])
-                elif event.get("type") == "content_block_delta":
-                    delta = event.get("delta", {})
-                    if delta.get("text"):
-                        yield AIMessage(content=delta["text"])
             except json.JSONDecodeError:
-                # Plain text fallback
-                if text:
-                    yield AIMessage(content=text)
+                continue
 
         await proc.wait()
 
